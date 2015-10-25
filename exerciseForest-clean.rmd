@@ -1,0 +1,101 @@
+---
+title: "Predicting Correct Equipment Use"
+author: "Andew Elliott"
+date: "Wednesday, October 21, 2015"
+output:
+  html_document:
+    keep_md: yes
+---
+Prepare data, including splitting the "pml-training.csv" into training and testing sets.  The "pml-testing.csv"" set gets held out for a very final test, as finalTestSet
+
+```{r, echo=FALSE}
+options(width=200)
+require(randomforest)
+require(caret)
+trainingSet<-read.csv("../pml/pml-training.csv")
+finalTestSet<-read.csv("../pml/pml-testing.csv")
+training<-read.csv("../pml/pml-training.csv")
+test<-read.csv("../pml/pml-testing.csv")
+#pml<-pml1[sample(nrow(pml1), 4000),]
+
+#inTrain <- createDataPartition(y=pml$classe, p=0.75, list=FALSE)
+#trainSet <- pml[inTrain,]
+#testSet <- pml[-inTrain,]
+
+
+#require(rattle)
+#require(rpart.plot)
+#source("learnRepeatVisits.R")
+#makeBehaviourData("3220")
+#makeDeviceData("2000")
+```
+
+Exclude Contextual columns which would use order or time to predict outcome
+```{r}
+trainingSet<-trainingSet[,-1:-6]
+#testSet<-testSet[,-1:-6]
+finalTestSet<-finalTestSet[,-1:-6]
+print(dim(trainingSet))
+
+training<-training[,7:160]
+test<-test[,7:160]
+print(dim(training))
+
+```
+
+Exclude Near Zero Variability and those with predominantly NA columns
+```{r}
+dim(trainingSet)
+nzv <- nearZeroVar(trainingSet, freqCut=10/1)
+trainingSet <- trainingSet[,-nzv]
+finalTestSet <- finalTestSet[,-nzv]
+dim(trainingSet)
+predomNA<-apply(is.na(trainingSet),2,mean)>0.9
+trainingSet <-trainingSet[,-predomNA]
+finalTestSet <-finalTestSet[,-predomNA]
+dim(trainingSet)
+
+mostly_data<-apply(!is.na(training),2,sum)>19621
+training<-training[,mostly_data]
+test<-test[,mostly_data]
+dim(training)
+
+
+```
+
+Subset a training set (small for time considerations)
+```{r}
+inTrain <- createDataPartition(y=trainingSet$classe, p=0.05, list=FALSE)
+trainSet <- trainingSet[inTrain,]
+testSet <- trainingSet[-inTrain,]
+print(dim(trainSet))
+
+InTrain<-createDataPartition(y=training$classe,p=0.03,list=FALSE)
+training1<-training[InTrain,]
+print(dim(training1))
+
+
+```
+
+
+Fit a Random Forest model
+```{r}
+#fitControl <- trainControl(method = "cv", number = 5)
+#modFit<- train(classe ~ . , method="rf", data=trainSet, trControl=fitControl, prox=TRUE, allowParallel=TRUE)
+#modFit
+
+rf_model<-train(classe~.,data=training1,method="rf",
+                trControl=trainControl(method="cv",number=5),
+                prox=TRUE,allowParallel=TRUE)
+print(rf_model)
+
+
+```
+Final Model
+```{r}
+modFit$finalModel
+#predictions<-predict(modFit, newdata=finalTestSet)
+#length(predictions)
+#length(finalTestSet$classe)
+#confusionMatrix(predictions, testing$classe)
+```                
